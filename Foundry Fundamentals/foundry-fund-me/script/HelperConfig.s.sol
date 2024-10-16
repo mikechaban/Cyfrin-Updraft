@@ -23,14 +23,14 @@ contract HelperConfig is Script {
         if (block.chainid == 11155111) {
             activeNetworkConfig = getSepoliaEthConfig();
         } else {
-            activeNetworkConfig = getAnvilEthConfig();
+            activeNetworkConfig = getOrCreateAnvilEthConfig();
         }
     }
 
     function getSepoliaEthConfig()
         public
         pure
-        returns (NetworkConfig memory sepoliaNetworkConfig)
+        returns (NetworkConfig memory )
     {
         NetworkConfig memory sepoliaNetworkConfig = NetworkConfig({
             priceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306 // ETH / USD
@@ -38,13 +38,17 @@ contract HelperConfig is Script {
         return sepoliaNetworkConfig;
     }
 
-    function getAnvilEthConfig()
+    function getOrCreateAnvilEthConfig()
         public
         returns (
             /* (can't be pure because we modify the state of the blockchain) */
             NetworkConfig memory
         )
     {
+        if (activeNetworkConfig.priceFeed != address(0)) {
+            return activeNetworkConfig;
+        }
+
         // 1. Deploy the mocks
         // 2. Return the mock address
 
