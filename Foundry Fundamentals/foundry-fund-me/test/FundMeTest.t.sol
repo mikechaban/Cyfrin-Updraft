@@ -76,7 +76,7 @@ contract FundMeTest is Test {
 
         vm.prank(USER);
         vm.expectRevert();
-        fundMe.withdraw();
+        fundMe.cheaperWithdraw();
     }
 
     function testWithdrawWithASingleFunder() public funded {
@@ -90,7 +90,7 @@ contract FundMeTest is Test {
 
         // Act
         vm.prank(fundMe.getOwner()); // Sets the msg.sender to the owner of the fundMe contract for the next transaction
-        fundMe.withdraw();
+        fundMe.cheaperWithdraw();
 
         // Assert
         uint256 endingOwnerBalance = fundMe.getOwner().balance;
@@ -128,7 +128,7 @@ contract FundMeTest is Test {
         // vm.startPrank(address) / vm.stopPrank(): Use this for multiple function calls where you want to impersonate the same address over a series of interactions.
 
         // Act
-        
+
         // uint256 gasStart = gasleft();
         // vm.txGasPrice(GAS_PRICE);
         vm.prank(fundMe.getOwner());
@@ -143,6 +143,59 @@ contract FundMeTest is Test {
         vm.startPrank(testAddress);
         vm.expectRevert();
         fundMe.withdraw();
+        vm.stopPrank();
+
+        // Assert
+        assert(address(fundMe).balance == 0);
+        // or we can do assertEq(address(fundMe).balance, 0);
+
+        assertEq(
+            startingFundMeBalance + startingOwnerBalance,
+            fundMe.getOwner().balance
+        );
+    }
+
+    function testWithdrawWithMultipleFundersButCheaper() public funded {
+        // Arrange
+        uint160 numberOfFunders = 10;
+        uint160 startingFunderIndex = 1; // when doing tests make sure you're not sending stuff to 0th address cause it reverts sometimes
+
+        for (uint160 i = startingFunderIndex; i < numberOfFunders; i++) {
+            // we're gonna do
+            // vm.prank new address
+            // vm.deal some money
+            // and they're going to fund the fundMe
+
+            // but forge std lib has "hoax" cheatcode (sets up a prank from an address that has some ether) <- this does both Prank and Deal combined
+
+            // we do uint160 for address since it has the same number of bytes
+
+            hoax(address(i), SEND_VALUE);
+            fundMe.fund{value: SEND_VALUE}();
+        }
+
+        uint256 startingOwnerBalance = fundMe.getOwner().balance;
+        uint256 startingFundMeBalance = address(fundMe).balance;
+
+        // vm.prank(address): Use this for a single function call where you want to impersonate a specific address.
+        // vm.startPrank(address) / vm.stopPrank(): Use this for multiple function calls where you want to impersonate the same address over a series of interactions.
+
+        // Act
+
+        // uint256 gasStart = gasleft();
+        // vm.txGasPrice(GAS_PRICE);
+        vm.prank(fundMe.getOwner());
+        fundMe.cheaperWithdraw();
+
+        // uint256 gasEnd = gasleft();
+        // uint256 gasUsed = (gasStart - gasEnd) * tx.gasprice;
+        // console.log(gasUsed);
+
+        // we can do as above or use startPrank and stopPrank:
+        address testAddress = vm.addr(11);
+        vm.startPrank(testAddress);
+        vm.expectRevert();
+        fundMe.cheaperWithdraw();
         vm.stopPrank();
 
         // Assert
