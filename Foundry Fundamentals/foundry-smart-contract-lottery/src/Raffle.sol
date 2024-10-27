@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/dev/vrf/libraries/VRFV2PlusClient.sol";
 
 /**
  * @title A sample Raffle contract
@@ -16,10 +17,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle_NotEnoughTimePassed();
 
     /* State Variables */
+    uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint256 private immutable i_entranceFee;
     // the declaration uint256 private immutable i_entranceFee; just creates the variable but doesn’t give it a value.
     uint256 private immutable i_interval;
     // @dev the duration of the lottery in seconds
+    bytes32 private immutable i_keyHash;
+    uint256 private immutable i_subscriptionId;
     address payable[] private s_players; // <- this is the syntax for making an address array payable
     uint256 private s_lastTimeStamp;
 
@@ -28,10 +32,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // a constructor is a special function that runs only once when a smart contract is first deployed to the blockchain. It’s used to set up the contract’s initial state, like assigning values or initializing variables. After it’s executed, it can’t be called again.
     // in this case, the constructor is used to assign a value to that variable when the contract is deployed.
-    constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator) /* we also need to add the inherited contract's constructor: */ VRFConsumerBaseV2Plus(vrfCoordinator) {
+    constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes32 gasLane, uint256 subscriptionId) /* we also need to add the inherited contract's constructor: */ VRFConsumerBaseV2Plus(vrfCoordinator) {
+        /* we now have the access to the s_vrfCoordinator variable from VRFConsumerBaseV2Plus */
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
+        i_keyHash = gasLane;
+        i_subscriptionId = subscriptionId;
     }
 
     function enterRaffle() external payable {
@@ -66,11 +73,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle_NotEnoughTimePassed();
         } // <- globally available unit like msg.sender or msg.value
 
-        requestId = s_vrfCoordinator.requestRandomWords( // s_vrfCoordinator is going to be some type of coordinator smart contract, which has a function called requestRandomWords()
+        uint256 requestId = s_vrfCoordinator.requestRandomWords( // s_vrfCoordinator is going to be some type of coordinator smart contract, which has a function called requestRandomWords()
             VRFV2PlusClient.RandomWordsRequest({
-                keyHash: s_keyHash,
-                subId: s_subscriptionId,
-                requestConfirmations: requestConfirmations,
+                keyHash: i_keyHash,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
                 callbackGasLimit: callbackGasLimit,
                 numWords: numWords,
                 extraArgs: VRFV2PlusClient._argsToBytes(
@@ -80,6 +87,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
             })
         );
     }
+
+    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {}
 
     /**
      * Getter Functions
