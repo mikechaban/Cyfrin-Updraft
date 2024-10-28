@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/dev/vrf/libraries/VRFV2PlusClient.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 /**
  * @title A sample Raffle contract
@@ -10,7 +10,6 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/dev/vrf/libraries/V
  * @notice This contract is for creating a sample raffle
  * @dev Implements Chainlink VRFv2.5
  */
-
 contract Raffle is VRFConsumerBaseV2Plus {
     /* Errors */
     error Raffle_NotEnoughETHSent();
@@ -18,12 +17,14 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     /* State Variables */
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    uint32 private constant NUM_WORDS = 1;
     uint256 private immutable i_entranceFee;
     // the declaration uint256 private immutable i_entranceFee; just creates the variable but doesn’t give it a value.
     uint256 private immutable i_interval;
     // @dev the duration of the lottery in seconds
     bytes32 private immutable i_keyHash;
     uint256 private immutable i_subscriptionId;
+    uint32 private immutable i_callbackGasLimit;
     address payable[] private s_players; // <- this is the syntax for making an address array payable
     uint256 private s_lastTimeStamp;
 
@@ -32,13 +33,14 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // a constructor is a special function that runs only once when a smart contract is first deployed to the blockchain. It’s used to set up the contract’s initial state, like assigning values or initializing variables. After it’s executed, it can’t be called again.
     // in this case, the constructor is used to assign a value to that variable when the contract is deployed.
-    constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes32 gasLane, uint256 subscriptionId) /* we also need to add the inherited contract's constructor: */ VRFConsumerBaseV2Plus(vrfCoordinator) {
+    constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes32 gasLane, uint256 subscriptionId, uint32 callbackGasLimit /* we also need to add the inherited contract's constructor: */) VRFConsumerBaseV2Plus(vrfCoordinator) {
         /* we now have the access to the s_vrfCoordinator variable from VRFConsumerBaseV2Plus */
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
         i_keyHash = gasLane;
         i_subscriptionId = subscriptionId;
+        i_callbackGasLimit = callbackGasLimit;
     }
 
     function enterRaffle() external payable {
@@ -73,22 +75,20 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle_NotEnoughTimePassed();
         } // <- globally available unit like msg.sender or msg.value
 
-        uint256 requestId = s_vrfCoordinator.requestRandomWords( // s_vrfCoordinator is going to be some type of coordinator smart contract, which has a function called requestRandomWords()
-            VRFV2PlusClient.RandomWordsRequest({
-                keyHash: i_keyHash,
-                subId: i_subscriptionId,
-                requestConfirmations: REQUEST_CONFIRMATIONS,
-                callbackGasLimit: callbackGasLimit,
-                numWords: numWords,
-                extraArgs: VRFV2PlusClient._argsToBytes(
-                    // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
-                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
-                )
-            })
-        );
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
+            keyHash: i_keyHash,
+            subId: i_subscriptionId,
+            requestConfirmations: REQUEST_CONFIRMATIONS,
+            callbackGasLimit: i_callbackGasLimit,
+            numWords: NUM_WORDS, // Number of Random numbers required
+            extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
+        });
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
 
-    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {}
+    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override /* we're overriding because in the imported contract the function is virtual, which means it's meant to be overriden (also means it's meant to be implemented in our contract) */ /* abstract contracts (like) VRFConsumerBaseV2Plus can have both undefined and defined functions. 'if you're going to import this contract, you need to define fulfillRandomWords" */ {
+
+    }
 
     /**
      * Getter Functions
