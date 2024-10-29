@@ -14,6 +14,15 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Errors */
     error Raffle_NotEnoughETHSent();
     error Raffle_NotEnoughTimePassed();
+    error Raffle__TransferFailed();
+    error Raffle__RaffleIsCalculating();
+
+    /* Type Declarations */
+    enum RaffleState {
+        OPEN, // 0
+        CALCULATING // 1
+        // ANOTHER_STATE // 2
+    }
 
     /* State Variables */
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
@@ -27,9 +36,12 @@ contract Raffle is VRFConsumerBaseV2Plus {
     uint32 private immutable i_callbackGasLimit;
     address payable[] private s_players; // <- this is the syntax for making an address array payable
     uint256 private s_lastTimeStamp;
+    address private s_recentWinner;
+    RaffleState private s_raffleState;
 
     /* Events */
     event RaffleEntered(address indexed player);
+    event WinnerPicked(address indexed winner);
 
     // a constructor is a special function that runs only once when a smart contract is first deployed to the blockchain. It’s used to set up the contract’s initial state, like assigning values or initializing variables. After it’s executed, it can’t be called again.
     // in this case, the constructor is used to assign a value to that variable when the contract is deployed.
@@ -37,15 +49,21 @@ contract Raffle is VRFConsumerBaseV2Plus {
         /* we now have the access to the s_vrfCoordinator variable from VRFConsumerBaseV2Plus */
         i_entranceFee = entranceFee;
         i_interval = interval;
-        s_lastTimeStamp = block.timestamp;
         i_keyHash = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+
+        s_lastTimeStamp = block.timestamp;
+        s_raffleState = RaffleState.OPEN; // same as RaffleState(0)
     }
 
     function enterRaffle() external payable {
+        // Two checks:
         if (msg.value < i_entranceFee) {
             revert Raffle_NotEnoughETHSent();
+        }
+        if (s_raffleState != RaffleState.OPEN) {
+            revert Raffle__RaffleIsCalculating();
         }
 
         s_players.push(payable(msg.sender));
@@ -71,9 +89,12 @@ contract Raffle is VRFConsumerBaseV2Plus {
     }
 
     function pickWinner() external {
+        // Checks
         if ((block.timestamp - s_lastTimeStamp) < i_interval) {
             revert Raffle_NotEnoughTimePassed();
         } // <- globally available unit like msg.sender or msg.value
+
+        s_raffleState = RaffleState.CALCULATING;
 
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient.RandomWordsRequest({
             keyHash: i_keyHash,
@@ -86,8 +107,28 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
 
+    // CEI: Checks, Effects, Interactions
     function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override /* we're overriding because in the imported contract the function is virtual, which means it's meant to be overriden (also means it's meant to be implemented in our contract) */ /* abstract contracts (like) VRFConsumerBaseV2Plus can have both undefined and defined functions. 'if you're going to import this contract, you need to define fulfillRandomWords" */ {
+        // Checks
+        // require() (conditionals)
 
+        // Effects (Internal Contract State Changes)
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
+        address payable recentWinner = s_players[indexOfWinner];
+        s_recentWinner = recentWinner;
+
+        s_raffleState = RaffleState.OPEN;
+
+        s_players = new address payable[](/* of size: */ 0);
+        s_lastTimeStamp = block.timestamp;
+
+        emit WinnerPicked(s_recentWinner);
+
+        // Interactions (External Contract Interactions)
+        (bool success, ) = recentWinner.call{value: address(this).balance}("");
+        if (!success) {
+            revert Raffle__TransferFailed();
+        }
     }
 
     /**
