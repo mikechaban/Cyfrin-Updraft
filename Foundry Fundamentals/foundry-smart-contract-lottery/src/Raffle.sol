@@ -100,7 +100,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
      * @return upkeepNeeded - true if it's time to restart the lottery
      * @return - ignored
      */
-    function checkUpkeep(bytes calldata /* checkData */) public view returns (bool upkeepNeeded /* now this var is initialized, defaults to false */, bytes memory /* performData */) {
+    function checkUpkeep(bytes memory /* checkData */) public view returns (bool upkeepNeeded /* now this var is initialized, defaults to false */, bytes memory /* performData */) {
         bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) >= i_interval);
 
         bool isOpen = s_raffleState == RaffleState.OPEN;
