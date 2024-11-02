@@ -46,14 +46,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // a constructor is a special function that runs only once when a smart contract is first deployed to the blockchain. It’s used to set up the contract’s initial state, like assigning values or initializing variables. After it’s executed, it can’t be called again.
     // in this case, the constructor is used to assign a value to that variable when the contract is deployed.
-    constructor(
-        uint256 entranceFee,
-        uint256 interval,
-        address vrfCoordinator,
-        bytes32 gasLane,
-        uint256 subscriptionId,
-        uint32 callbackGasLimit /* we also need to add the inherited contract's constructor: */
-    ) VRFConsumerBaseV2Plus(vrfCoordinator) {
+    constructor(uint256 entranceFee, uint256 interval, address vrfCoordinator, bytes32 gasLane, uint256 subscriptionId, uint32 callbackGasLimit /* we also need to add the inherited contract's constructor: */) VRFConsumerBaseV2Plus(vrfCoordinator) {
         /* we now have the access to the s_vrfCoordinator variable from VRFConsumerBaseV2Plus */
         i_entranceFee = entranceFee;
         i_interval = interval;
@@ -108,16 +101,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
      * @return upkeepNeeded - true if it's time to restart the lottery
      * @return - ignored
      */
-    function checkUpkeep(
-        bytes memory /* checkData */
-    )
-        public
-        view
-        returns (
-            bool upkeepNeeded /* now this var is initialized, defaults to false */,
-            bytes memory /* performData */
-        )
-    {
+    function checkUpkeep(bytes memory /* checkData */) public view returns (bool upkeepNeeded /* now this var is initialized, defaults to false */, bytes memory /* performData */) {
         bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) >= i_interval);
 
         bool isOpen = s_raffleState == RaffleState.OPEN;
@@ -134,11 +118,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // Checks
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
-            revert Raffle__UpkeepNotNeeded(
-                address(this).balance,
-                s_players.length,
-                uint256(s_raffleState)
-            );
+            revert Raffle__UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
         }
 
         s_raffleState = RaffleState.CALCULATING;
@@ -149,21 +129,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
             requestConfirmations: REQUEST_CONFIRMATIONS,
             callbackGasLimit: i_callbackGasLimit,
             numWords: NUM_WORDS, // Number of Random numbers required
-            extraArgs: VRFV2PlusClient._argsToBytes(
-                VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
-            )
+            extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
         });
         s_vrfCoordinator.requestRandomWords(request);
     }
 
     // CEI: Checks, Effects, Interactions
-    function fulfillRandomWords(
-        uint256 /* requestId */,
-        uint256[] calldata randomWords
-    )
-        internal
-        override
-    /* we're overriding because in the imported contract the function is virtual, which means it's meant to be overriden (also means it's meant to be implemented in our contract) */ /* abstract contracts (like) VRFConsumerBaseV2Plus can have both undefined and defined functions. 'if you're going to import this contract, you need to define fulfillRandomWords" */ {
+    function fulfillRandomWords(uint256 /* requestId */, uint256[] calldata randomWords) internal override /* we're overriding because in the imported contract the function is virtual, which means it's meant to be overriden (also means it's meant to be implemented in our contract) */ /* abstract contracts (like) VRFConsumerBaseV2Plus can have both undefined and defined functions. 'if you're going to import this contract, you need to define fulfillRandomWords" */ {
         // Checks
         // require() (conditionals)
 
