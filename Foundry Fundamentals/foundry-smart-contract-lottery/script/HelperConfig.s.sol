@@ -9,6 +9,7 @@ abstract contract CodeConstants {
     /* VRF Mock Values */
     uint96 public MOCK_BASE_FEE = 0.25 ether;
     uint96 public MOCK_GAS_PRICE_LINK = 1e9;
+
     // LINK/ETH price
     int256 public MOCK_WEI_PER_UNIT_LINK = 4e15;
 
@@ -46,6 +47,10 @@ contract HelperConfig is CodeConstants, Script {
         }
     }
 
+    function getConfig() public returns (NetworkConfig memory) {
+        return getConfigByChainId(block.chainid);
+    }
+
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
         return
             NetworkConfig({
@@ -64,9 +69,18 @@ contract HelperConfig is CodeConstants, Script {
         }
 
         vm.startBroadcast();
-
         VRFCoordinatorV2_5Mock vrfCoordinatorMock = new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
-
         vm.stopBroadcast();
+
+        localNetworkConfig = NetworkConfig({
+            entranceFee: 0.01 ether,
+            interval: 30,
+            vrfCoordinator: address(vrfCoordinatorMock),
+            subscriptionId: 0,
+            // doesn't matter:
+            gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
+            callbackGasLimit: 500000
+        });
+        return localNetworkConfig;
     }
 }
