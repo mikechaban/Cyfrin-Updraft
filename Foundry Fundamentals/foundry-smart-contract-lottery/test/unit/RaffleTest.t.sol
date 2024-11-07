@@ -39,6 +39,16 @@ contract RaffleTest is Test {
         vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
     }
 
+    //===================================================================================
+    //
+    //  ######  #####   ####  ######   ####
+    //    ##    ##     ##       ##    ##
+    //    ##    #####   ###     ##     ###
+    //    ##    ##        ##    ##       ##
+    //    ##    #####  ####     ##    ####
+    //
+    //===================================================================================
+
     function testRaffleInitializesInOpenState() public view {
         assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN);
     }

@@ -13,3 +13,9 @@
 [submodule "Foundry Fundamentals/foundry-smart-contract-lottery/lib/forge-std"]
 	path = Foundry Fundamentals/foundry-smart-contract-lottery/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "Foundry Fundamentals/foundry-smart-contract-lottery/lib/solmate"]
+	path = Foundry Fundamentals/foundry-smart-contract-lottery/lib/solmate
+	url = https://github.com/transmissions11/solmate
+[submodule "Foundry Fundamentals/foundry-smart-contract-lottery/lib/foundry-devops"]
+	path = Foundry Fundamentals/foundry-smart-contract-lottery/lib/foundry-devops
+	url = https://github.com/Cyfrin/foundry-devops
