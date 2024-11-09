@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {Raffle} from "src/Raffle.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract RaffleTest is Test {
     Raffle public raffle;
@@ -144,9 +145,9 @@ contract RaffleTest is Test {
         assert(!upkeepNeeded);
     }
 
-    function testCheckUpkeepReturnsFalseIfEnoughTimeHasPassed() {}
+    // function testCheckUpkeepReturnsFalseIfEnoughTimeHasPassed() {}
 
-    function testCheckUpkeepReturnsTrueWhenParametersAreGood() {}
+    // function testCheckUpkeepReturnsTrueWhenParametersAreGood() {}
 
     /*//////////////////////////////////////////////////////////////
                              PERFORMUPKEEP
@@ -161,6 +162,51 @@ contract RaffleTest is Test {
         vm.roll(block.number + 1);
 
         // Act / Assert
+        raffle.performUpkeep(""); // if this function errors, the test will fail
+    }
+
+    function testPerformUpkeepRevertsIfCheckUpkeepIsFalse() public {
+        // Arrange
+        uint256 currentBalance = 0;
+        uint256 numPlayers = 0;
+        Raffle.RaffleState rState = raffle.getRaffleState();
+
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+        currentBalance = currentBalance + entranceFee;
+        numPlayers = 1;
+
+        // Act / Assert
+        vm.expectRevert(abi.encodeWithSelector(Raffle.Raffle__UpkeepNotNeeded.selector, currentBalance, numPlayers, rState));
         raffle.performUpkeep("");
     }
+
+    modifier raffleEntered() {
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        _; // In Solidity, the _ (underscore) is used within a modifier to indicate where the function body should be inserted when the modifier is applied to a function.
+    }
+
+    function testPerformUpkeepUpdatesRaffleStateAndEmitsRequestID() public raffleEntered {
+        // Act
+        vm.recordLogs();
+        // says "whatever logs are emitted by this performUpkeep function - keep track of those and put them in ("entries") array"
+        raffle.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // grabbing the requestId from "entries" array
+        bytes32 requestId = entries[1].topics[1];
+
+        // Assert
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+        assert(uint256(requestId) > 0);
+        assert(uint256(raffleState) == 1);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                           FULFILLRANDOMWORDS
+    //////////////////////////////////////////////////////////////*/
+
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep() public raffleEntered {}
 }

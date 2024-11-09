@@ -43,6 +43,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Events */
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     // a constructor is a special function that runs only once when a smart contract is first deployed to the blockchain. It’s used to set up the contract’s initial state, like assigning values or initializing variables. After it’s executed, it can’t be called again.
     // in this case, the constructor is used to assign a value to that variable when the contract is deployed.
@@ -114,7 +115,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return (upkeepNeeded, "");
     }
 
-    /* was pickWinner() */ function performUpkeep(bytes calldata /* performData */) external {
+    /* this function was pickWinner() */
+    function performUpkeep(bytes calldata /* performData */) external {
         // Checks
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
@@ -131,7 +133,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
             numWords: NUM_WORDS, // Number of Random numbers required
             extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
         });
-        s_vrfCoordinator.requestRandomWords(request);
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+
+        // (This is redundant. We left it here for tests:)
+        emit RequestedRaffleWinner(requestId);
     }
 
     // CEI: Checks, Effects, Interactions
