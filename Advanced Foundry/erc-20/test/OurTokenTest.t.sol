@@ -24,4 +24,47 @@ contract OurTokenTest is Test {
     function testBobBalance() public view {
         assertEq(ourToken.balanceOf(bob), STARTING_BALANCE);
     }
+
+    function testAllowancesWorks() public {
+        // Arrange
+        uint256 initialAllowance = 1000;
+
+        // Act
+        // Bob approves Alice to spend tokens on his behalf
+        vm.prank(bob);
+        ourToken.approve(alice, initialAllowance);
+
+        uint256 transferAmount = 500;
+
+        vm.prank(alice);
+        ourToken.transferFrom(bob, alice, transferAmount);
+
+        // Assert
+        assertEq(ourToken.balanceOf(alice), transferAmount);
+        assertEq(ourToken.balanceOf(bob), STARTING_BALANCE - transferAmount);
+    }
+
+    function testTotalSupply() public view {
+        uint256 initialSupply = ourToken.totalSupply();
+        assertEq(initialSupply, 1000 ether); // Assuming initial supply is 1000 ether
+    }
+
+    function testTransfer() public {
+        uint256 transferAmount = 10 ether;
+
+        vm.prank(bob);
+        ourToken.transfer(alice, transferAmount);
+
+        assertEq(ourToken.balanceOf(alice), transferAmount);
+        assertEq(ourToken.balanceOf(bob), STARTING_BALANCE - transferAmount);
+    }
+
+    function testBalanceAfterTransfer() public {
+        uint256 transferAmount = 10 ether;
+
+        vm.prank(bob);
+        ourToken.transfer(alice, transferAmount);
+
+        assertEq(ourToken.balanceOf(bob), STARTING_BALANCE - transferAmount);
+    }
 }
