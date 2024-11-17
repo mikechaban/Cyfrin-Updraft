@@ -28,3 +28,6 @@
 [submodule "Advanced Foundry/nft/lib/forge-std"]
 	path = Advanced Foundry/nft/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "Advanced Foundry/nft/lib/openzeppelin-contracts"]
+	path = Advanced Foundry/nft/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
