@@ -14,9 +14,10 @@ contract MoodNFT is ERC721 {
         SAD
     }
 
-    mapping(uint256 => Mood) private s_tokenIDToMood;
+    mapping(uint256 => Mood) private s_tokenIdToMood;
 
     error MoodNFT__MoodNotDefined();
+    error MoodNFT__CanNotFlipMoodIfNotOwner();
 
     constructor(
         string memory sadSVGImageURI,
@@ -28,24 +29,35 @@ contract MoodNFT is ERC721 {
     }
 
     function mintNFT() public {
-        _safeMint(msg.sender, s_tokenCounter); // <- so that the msg.sender gets their tokenID
+        _safeMint(msg.sender, s_tokenCounter); // <- so that the msg.sender gets their tokenId
 
-        s_tokenIDToMood[s_tokenCounter] = Mood.HAPPY;
+        s_tokenIdToMood[s_tokenCounter] = Mood.HAPPY;
 
         s_tokenCounter++;
+    }
+
+    function flipMood(uint256 tokenId) public {
+        // only want the NFT owner to be able to change the mood
+        if (getApproved(tokenId) != msg.sender && ownerOf(tokenId) != msg.sender) {
+            revert MoodNFT__CanNotFlipMoodIfNotOwner();
+        }
+
+        if (s_tokenIdToMood[tokenId] == Mood.HAPPY) {
+            s_tokenIdToMood[tokenId] = Mood.SAD;
+        } else {
+            s_tokenIdToMood[tokenId] = Mood.HAPPY;
+        }
     }
 
     function _baseURI() internal pure override returns (string memory) {
         return "data:application/json;base64,";
     }
 
-    function tokenURI(
-        uint256 tokenID
-    ) public view override returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
         string memory imageURI;
-        if (s_tokenIDToMood[tokenID] == Mood.HAPPY) {
+        if (s_tokenIdToMood[tokenId] == Mood.HAPPY) {
             imageURI = s_happySVGImageURI;
-        } else if (s_tokenIDToMood[tokenID] == Mood.SAD) {
+        } else if (s_tokenIdToMood[tokenId] == Mood.SAD) {
             imageURI = s_sadSVGImageURI;
         } else {
             revert MoodNFT__MoodNotDefined();
