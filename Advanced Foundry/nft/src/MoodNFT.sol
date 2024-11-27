@@ -19,10 +19,7 @@ contract MoodNFT is ERC721 {
     error MoodNFT__MoodNotDefined();
     error MoodNFT__CanNotFlipMoodIfNotOwner();
 
-    constructor(
-        string memory sadSVGImageURI,
-        string memory happySVGImageURI
-    ) ERC721("MoodNFT", "MN") {
+    constructor(string memory sadSVGImageURI, string memory happySVGImageURI) ERC721("MoodNFT", "MN") {
         s_tokenCounter = 0;
         s_sadSVGImageURI = sadSVGImageURI;
         s_happySVGImageURI = happySVGImageURI;
@@ -63,23 +60,6 @@ contract MoodNFT is ERC721 {
             revert MoodNFT__MoodNotDefined();
         }
 
-        return
-            string(
-                abi.encodePacked(
-                    _baseURI(),
-                    Base64.encode(
-                        bytes(
-                            abi.encodePacked(
-                                '{"name":"',
-                                name(),
-                                '", "description":"An NFT that reflects the mood of the owner", ',
-                                '"attributes": [{"trait_type": "moodiness", "value": 100}], "image":"',
-                                imageURI,
-                                '"}'
-                            )
-                        )
-                    )
-                )
-            );
+        return string(abi.encodePacked(_baseURI(), Base64.encode(bytes(abi.encodePacked('{"name":"', name(), '", "description":"An NFT that reflects the mood of the owner", ', '"attributes": [{"trait_type": "moodiness", "value": 100}], "image":"', imageURI, '"}')))));
     }
 }

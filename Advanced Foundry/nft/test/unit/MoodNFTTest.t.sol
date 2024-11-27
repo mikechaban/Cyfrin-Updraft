@@ -1,3 +1,5 @@
+// Unit Tests: Focus on individual functions or components.
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 

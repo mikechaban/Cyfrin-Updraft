@@ -7,14 +7,10 @@ import {BasicNFT} from "../src/BasicNFT.sol";
 import {MoodNFT} from "../src/MoodNFT.sol";
 
 contract MintBasicNFT is Script {
-    string public constant DOG =
-        "ipfs://QmaQQdaRrLWDtD1zdxzzspJ1kihWknvk8GZSPa2ueUjqVJ";
+    string public constant DOG = "ipfs://QmaQQdaRrLWDtD1zdxzzspJ1kihWknvk8GZSPa2ueUjqVJ";
 
     function run() external {
-        address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment(
-            "BasicNFT",
-            block.chainid
-        );
+        address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment("BasicNFT", block.chainid);
         mintNFTOnContract(mostRecentlyDeployed);
     }
 
@@ -27,16 +23,28 @@ contract MintBasicNFT is Script {
 
 contract MintMoodNFT is Script {
     function run() external {
-        address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment(
-            "MoodNFT",
-            block.chainid
-        );
-        mintNFTOnContract(mostRecentlyDeployed);
+        address mostRecentlyDeployedMoodNFT = DevOpsTools.get_most_recent_deployment("MoodNFT", block.chainid);
+        mintNFTOnContract(mostRecentlyDeployedMoodNFT);
     }
 
-    function mintNFTOnContract(address contractAddress) public {
+    function mintNFTOnContract(address moodNFTAddress) public {
         vm.startBroadcast();
-        MoodNFT(contractAddress).mintNFT();
+        MoodNFT(moodNFTAddress).mintNFT();
+        vm.stopBroadcast();
+    }
+}
+
+contract FlipMoodNFT is Script {
+    uint256 public constant TOKEN_ID_TO_FLIP = 0;
+
+    function run() external {
+        address mostRecentlyDeployedMoodNft = DevOpsTools.get_most_recent_deployment("MoodNFT", block.chainid);
+        flipMoodOnContract(mostRecentlyDeployedMoodNft);
+    }
+
+    function flipMoodOnContract(address moodNftAddress) public {
+        vm.startBroadcast();
+        MoodNFT(moodNftAddress).flipMood(TOKEN_ID_TO_FLIP);
         vm.stopBroadcast();
     }
 }
