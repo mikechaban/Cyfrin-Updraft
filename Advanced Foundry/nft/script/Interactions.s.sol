@@ -38,13 +38,13 @@ contract FlipMoodNFT is Script {
     uint256 public constant TOKEN_ID_TO_FLIP = 0;
 
     function run() external {
-        address mostRecentlyDeployedMoodNft = DevOpsTools.get_most_recent_deployment("MoodNFT", block.chainid);
-        flipMoodOnContract(mostRecentlyDeployedMoodNft);
+        address mostRecentlyDeployedMoodNFT = DevOpsTools.get_most_recent_deployment("MoodNFT", block.chainid);
+        flipMoodOnContract(mostRecentlyDeployedMoodNFT);
     }
 
-    function flipMoodOnContract(address moodNftAddress) public {
+    function flipMoodOnContract(address moodNFTAddress) public {
         vm.startBroadcast();
-        MoodNFT(moodNftAddress).flipMood(TOKEN_ID_TO_FLIP);
+        MoodNFT(moodNFTAddress).flipMood(TOKEN_ID_TO_FLIP);
         vm.stopBroadcast();
     }
 }
