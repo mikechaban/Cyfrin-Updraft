@@ -34,3 +34,6 @@
 [submodule "Advanced Foundry/nft/lib/foundry-devops"]
 	path = Advanced Foundry/nft/lib/foundry-devops
 	url = https://github.com/Cyfrin/foundry-devops
+[submodule "Advanced Foundry/defi/lib/forge-std"]
+	path = Advanced Foundry/defi/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
