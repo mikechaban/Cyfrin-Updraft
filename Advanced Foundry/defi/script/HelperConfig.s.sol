@@ -40,10 +40,12 @@ contract HelperConfig is Script {
 
         vm.startBroadcast();
         MockV3Aggregator ethUsdPricefeed = new MockV3Aggregator(DECIMALS, ETH_USD_PRICE);
-        ERC20Mock wethMock = new ERC20Mock("WETH", "WETH", msg.sender, 1000e8);
+        ERC20Mock wethMock = new ERC20Mock();
+        wethMock.mint(msg.sender, 1000e8);
 
         MockV3Aggregator btcUsdPricefeed = new MockV3Aggregator(DECIMALS, BTC_USD_PRICE);
-        ERC20Mock wbtcMock = new ERC20Mock("WBTC", "WBTC", msg.sender, 1000e8);
+        ERC20Mock wbtcMock = new ERC20Mock();
+        wbtcMock.mint(msg.sender, 1000e8);
         vm.stopBroadcast();
 
         return NetworkConfig({wethUsdPriceFeed: address(ethUsdPricefeed), wbtcUsdPriceFeed: address(btcUsdPricefeed), weth: address(wethMock), wbtc: address(wbtcMock), deployerKey: DEFAULT_ANVIL_KEY});
