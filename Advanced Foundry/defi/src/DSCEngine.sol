@@ -34,6 +34,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
     error DSCEngine__MintingFailed();
     error DSCEngine__HealthFactorOK();
+    error DSCEngine__HealthFactorNotImproved();
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
@@ -131,21 +132,26 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    /**
-     * @notice Follows CEI
-     * @param tokenCollateralAddress The collateral address to redeem
-     * @param amountCollateral The amount of collateral to redeem
-     * @param amountDSCToBurn The amount of DSC to burn
-     * @notice This function burns DSC and redeems underlying collateral in one transaction
+    /*
+     * @param tokenCollateralAddress: The ERC20 token address of the collateral you're withdrawing
+     * @param amountCollateral: The amount of collateral you're withdrawing
+     * @param amountDscToBurn: The amount of DSC you want to burn
+     * @notice This function will withdraw your collateral and burn DSC in one transaction
      */
-    function redeemCollateralForDSC(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDSCToBurn) external {
-        burnDSC(amountDSCToBurn);
-        redeemCollateral(tokenCollateralAddress, amountCollateral);
-        // redeemCollateral already reverts if health factor is broken
+    function redeemCollateralForDsc(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDscToBurn) external moreThanZero(amountCollateral) {
+        _burnDSC(amountDscToBurn, msg.sender, msg.sender);
+        _redeemCollateral(tokenCollateralAddress, amountCollateral, msg.sender, msg.sender);
+        _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral) public moreThanZero(amountCollateral) nonReentrant {
-        _redeemCollateral(msg.sender, msg.sender, tokenCollateralAddress, amountCollateral);
+    /*
+     * @param tokenCollateralAddress: The ERC20 token address of the collateral you're redeeming
+     * @param amountCollateral: The amount of collateral you're redeeming
+     * @notice This function will redeem your collateral.
+     * @notice If you have DSC minted, you will not be able to redeem until you burn your DSC
+     */
+    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral) external moreThanZero(amountCollateral) nonReentrant {
+        _redeemCollateral(tokenCollateralAddress, amountCollateral, msg.sender, msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -166,12 +172,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     function burnDSC(uint256 amount) public moreThanZero(amount) {
-        s_DSCMinted[msg.sender] -= amount;
-        bool success = i_DSC.transferFrom(msg.sender, address(this), amount);
-        if (!success) {
-            revert DSCEngine__TransferFailed();
-        }
-        i_DSC.burn(amount);
+        _burnDSC(amount, msg.sender, msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -196,8 +197,15 @@ contract DSCEngine is ReentrancyGuard {
         // 0.05 * 0.1 = 0.005. Getting 0.055 ETH
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
-        
-        _redeemCollateral(user, msg.sender, collateral, totalCollateralToRedeem);
+
+        _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
+
+        _burnDSC(debtToCover, user, msg.sender);
+        uint256 endingUserHealthFactor = _healthFactor(user);
+        if (endingUserHealthFactor <= startingUserHealthFactor) {
+            revert DSCEngine__HealthFactorNotImproved();
+        }
+        _revertIfHealthFactorIsBroken(msg.sender);
     }
 
     function getHealthFactor() external view {}
@@ -205,6 +213,20 @@ contract DSCEngine is ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                      PRIVATE & INTERNAL VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @dev Low-level internal function. Do not call unless the function calling it is checking for health factors being broken
+     */
+    function _burnDSC(uint256 amountDSCToBurn, address onBehalfOf, address DSCFrom) private {
+        s_DSCMinted[onBehalfOf] -= amountDSCToBurn;
+        bool success = i_DSC.transferFrom(DSCFrom, address(this), amountDSCToBurn);
+        if (!success) {
+            revert DSCEngine__TransferFailed();
+        }
+        i_DSC.burn(amountDSCToBurn);
+        _revertIfHealthFactorIsBroken(msg.sender);
+    }
+
     function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to) private {
         s_collateralDeposited[from][tokenCollateralAddress] -= amountCollateral;
         emit CollateralRedeemed(from, to, tokenCollateralAddress, amountCollateral);
