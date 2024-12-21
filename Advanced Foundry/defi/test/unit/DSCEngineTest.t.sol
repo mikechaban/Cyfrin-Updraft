@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {DeployDSC} from "../../script/DeployDSC.s.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {ERC20Mock} from "../mocks/ERC20Mock.sol";
 
 contract DSCEngineTest is Test {
     DeployDSC deployer;
@@ -72,5 +72,47 @@ contract DSCEngineTest is Test {
         vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
         dsce.depositCollateral(weth, 0);
         vm.stopPrank();
+    }
+
+    function testRevertsWithUnapprovedCollateral() public {
+        ERC20Mock sillyToken = new ERC20Mock("SILLY", "SILLY", USER, AMOUNT_COLLATERAL);
+        vm.startPrank(USER);
+        vm.expectRevert(DSCEngine.DSCEngine__CollateralTokenNotAllowed.selector);
+        dsce.depositCollateral(address(sillyToken), AMOUNT_COLLATERAL);
+        vm.stopPrank();
+    }
+
+    modifier depositedCollateral() {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.stopPrank();
+        _;
+    }
+
+    function testCanDepositCollateralAndGetAccountInfo() public depositedCollateral {
+        (uint256 totalDSCMinted, uint256 collateralValueInUSD) = dsce.getAccountInformation(USER);
+
+        uint256 expectedTotalDSCMinted = 0;
+        uint256 expectedDepositAmount = dsce.getTokenAmountFromUSD(weth, collateralValueInUSD);
+        assertEq(totalDSCMinted, expectedTotalDSCMinted);
+        assertEq(AMOUNT_COLLATERAL, expectedDepositAmount);
+    }
+
+    function testRedeemCollateralForDSC() public depositedCollateral {
+        // Arrange
+        uint256 startingDSCBalance = AMOUNT_COLLATERAL;
+        uint256 startingWETHBalance = 0;
+        uint256 expectedDSCBalance = 0;
+        uint256 expectedWETHBalance = AMOUNT_COLLATERAL;
+
+        // Act
+        vm.startPrank(USER);
+        dsce.redeemCollateralForDSC(weth, AMOUNT_COLLATERAL, AMOUNT_COLLATERAL);
+        vm.stopPrank();
+
+        // Assert
+        assertEq(startingDSCBalance, expectedDSCBalance);
+        assertEq(startingWETHBalance, expectedWETHBalance);
     }
 }

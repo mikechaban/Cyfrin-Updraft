@@ -135,11 +135,11 @@ contract DSCEngine is ReentrancyGuard {
     /*
      * @param tokenCollateralAddress: The ERC20 token address of the collateral you're withdrawing
      * @param amountCollateral: The amount of collateral you're withdrawing
-     * @param amountDscToBurn: The amount of DSC you want to burn
+     * @param amountDSCToBurn: The amount of DSC you want to burn
      * @notice This function will withdraw your collateral and burn DSC in one transaction
      */
-    function redeemCollateralForDsc(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDscToBurn) external moreThanZero(amountCollateral) {
-        _burnDSC(amountDscToBurn, msg.sender, msg.sender);
+    function redeemCollateralForDSC(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDSCToBurn) external moreThanZero(amountCollateral) {
+        _burnDSC(amountDSCToBurn, msg.sender, msg.sender);
         _redeemCollateral(tokenCollateralAddress, amountCollateral, msg.sender, msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender);
     }
@@ -284,5 +284,9 @@ contract DSCEngine is ReentrancyGuard {
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
+    }
+
+    function getAccountInformation(address user) external view returns (uint256 totalDSCMinted, uint256 collateralValueInUSD) {
+        (totalDSCMinted, collateralValueInUSD) = _getAccountInformation(user);
     }
 }
