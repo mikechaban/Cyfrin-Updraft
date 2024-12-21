@@ -249,6 +249,12 @@ contract DSCEngine is ReentrancyGuard {
      */
     function _healthFactor(address user) private view returns (uint256) /* The underscore means it's an internal function */ {
         (uint256 totalDSCMinted, uint256 collateralValueInUSD) = _getAccountInformation(user);
+
+        // To avoid division by 0:
+        if (totalDSCMinted == 0) {
+            return type(uint256).max; // Return the maximum value if no DSC is minted
+        }
+
         uint256 collateralAdjustedForThreshold = (collateralValueInUSD * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
         return (collateralAdjustedForThreshold * PRECISION) / totalDSCMinted;
     }

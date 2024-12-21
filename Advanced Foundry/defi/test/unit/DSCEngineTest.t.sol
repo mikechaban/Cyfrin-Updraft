@@ -17,7 +17,9 @@ contract DSCEngineTest is Test {
     address btcUsdPriceFeed;
     address weth;
 
+    uint256 AMOUNT_TO_MINT = 100 ether;
     address public USER = makeAddr("user");
+
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
 
@@ -99,20 +101,23 @@ contract DSCEngineTest is Test {
         assertEq(AMOUNT_COLLATERAL, expectedDepositAmount);
     }
 
-    function testRedeemCollateralForDSC() public depositedCollateral {
+    function testRedeemCollateralForDSCFixed() public {
         // Arrange
-        uint256 startingDSCBalance = AMOUNT_COLLATERAL;
-        uint256 startingWETHBalance = 0;
-        uint256 expectedDSCBalance = 0;
         uint256 expectedWETHBalance = AMOUNT_COLLATERAL;
+
+        uint256 userDSCBalance = dsc.balanceOf(USER);
+        uint256 userWETHBalance = ERC20Mock(weth).balanceOf(USER);
 
         // Act
         vm.startPrank(USER);
-        dsce.redeemCollateralForDSC(weth, AMOUNT_COLLATERAL, AMOUNT_COLLATERAL);
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        dsce.depositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, AMOUNT_TO_MINT);
+        dsc.approve(address(dsce), AMOUNT_TO_MINT);
+        dsce.redeemCollateralForDSC(weth, AMOUNT_COLLATERAL, AMOUNT_TO_MINT);
         vm.stopPrank();
 
         // Assert
-        assertEq(startingDSCBalance, expectedDSCBalance);
-        assertEq(startingWETHBalance, expectedWETHBalance);
+        assertEq(userDSCBalance, 0);
+        assertEq(expectedWETHBalance, userWETHBalance);
     }
 }
