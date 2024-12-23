@@ -208,7 +208,7 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function getHealthFactor(address user) external view returns (uint256){
+    function getHealthFactor(address user) external view returns (uint256) {
         return _healthFactor(user);
     }
 
