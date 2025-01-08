@@ -13,6 +13,9 @@ contract Handler is Test {
     ERC20Mock weth;
     ERC20Mock wbtc;
 
+    uint256 public timesMintIsCalled;
+    address[] public usersWithCollateralDeposited;
+
     uint256 MAX_DEPOSIT_SIZE = type(uint96).max; // the max uint96 value
 
     constructor(DSCEngine _DSCEngine, DecentralizedStableCoin _DSC) {
@@ -24,7 +27,27 @@ contract Handler is Test {
         wbtc = ERC20Mock(collateralTokens[1]);
     }
 
-    // Redeem Collateral
+    function mintDSC(uint256 amount, uint256 addressSeed) public {
+        if(usersWithCollateralDeposited.length == 0) {
+            return;
+        }
+        address sender = usersWithCollateralDeposited[addressSeed % usersWithCollateralDeposited.length];
+
+        (uint256 totalDSCMinted, uint256 collateralValueInUSD) = dsce.getAccountInformation(sender);
+        int256 maxDSCToMint = (int256(collateralValueInUSD) / 2) - int256(totalDSCMinted);
+        if (maxDSCToMint < 0) {
+            return;
+        }
+        amount = bound(amount, 0, uint256(maxDSCToMint));
+        if (amount == 0) {
+            return;
+        }
+        vm.startPrank(sender);
+        dsce.mintDSC(amount);
+        vm.stopPrank();
+        timesMintIsCalled++;
+    }
+
     function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
         ERC20Mock collateral = _getCollateralFromSeed(collateralSeed);
         amountCollateral = bound(amountCollateral, 1, MAX_DEPOSIT_SIZE);
@@ -34,12 +57,17 @@ contract Handler is Test {
         collateral.approve(address(dsce), amountCollateral);
         dsce.depositCollateral(address(collateral), amountCollateral);
         vm.stopPrank();
+        // double push
+        usersWithCollateralDeposited.push(msg.sender);
     }
 
     function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
         ERC20Mock collateral = _getCollateralFromSeed(collateralSeed);
-        uint256 maxCollateralToRedeem = dsce.getCollateralBalanceOfUser(msg.sender, address(collateral));
-        amountCollateral = bound(amountCollateral, 1, maxCollateralToRedeem);
+        uint256 maxCollateralToRedeem = dsce.getCollateralBalanceOfUser(address(collateral), msg.sender);
+        amountCollateral = bound(amountCollateral, 0, maxCollateralToRedeem);
+        if (amountCollateral == 0) {
+            return;
+        }
         dsce.redeemCollateral(address(collateral), amountCollateral);
     }
 
