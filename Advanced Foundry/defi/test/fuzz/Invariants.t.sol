@@ -26,6 +26,14 @@ contract Invariants is StdInvariant, Test {
     address wbtc;
     Handler handler;
 
+    // For getter function Invariants
+    address token;
+    uint256 USDAmountInWei;
+    address user;
+    uint256 amount;
+    uint256 totalDscMinted;
+    uint256 collateralValueInUsd;
+
     function setUp() external {
         deployer = new DeployDSC();
         (dsc, dsce, config) = deployer.run();
@@ -52,5 +60,24 @@ contract Invariants is StdInvariant, Test {
         console.log("Times mint called: ", handler.timesMintIsCalled());
 
         assert(wethValue + wbtcValue >= totalSupply);
+    }
+
+    function invariant__gettersShouldNotRevert() public view {
+        dsce.getTokenAmountFromUSD(token, USDAmountInWei);
+        dsce.getAccountCollateralValue(user);
+        dsce.getUSDValue(token, amount);
+        dsce.calculateHealthFactor(totalDscMinted, collateralValueInUsd);
+        dsce.getAccountInformation(user);
+        dsce.getCollateralTokens();
+        dsce.getCollateralBalanceOfUser(user, token);
+        dsce.getPrecision();
+        dsce.getAdditionalFeedPrecision();
+        dsce.getLiquidationThreshold();
+        dsce.getLiquidationBonus();
+        dsce.getLiquidationPrecision();
+        dsce.getMinHealthFactor();
+        dsce.getDsc();
+        dsce.getCollateralTokenPriceFeed(token);
+        dsce.getHealthFactor(user);
     }
 }
