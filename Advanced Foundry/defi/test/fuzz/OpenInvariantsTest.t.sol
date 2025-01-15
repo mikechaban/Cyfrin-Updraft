@@ -32,9 +32,6 @@ contract OpenInvariantsTest is StdInvariant, Test {
     }
 
     function invariant_protocolMustHaveMoreValueThanTotalSupply() public view {
-        // get the value of all the collateral in the protocol
-        // compare it to all the debt (DSC)
-
         uint256 totalSupply = dsc.totalSupply();
         uint256 totalWETHDeposited = IERC20(weth).balanceOf(address(dsce));
         uint256 totalWBTCDeposited = IERC20(wbtc).balanceOf(address(dsce));

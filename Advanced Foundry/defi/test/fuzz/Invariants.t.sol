@@ -41,6 +41,14 @@ contract Invariants is StdInvariant, Test {
         // targetContract(address(dsce));
         handler = new Handler(dsce, dsc);
         targetContract(address(handler));
+
+        // For getter function Invariants
+        token = weth; // or any appropriate token address
+        USDAmountInWei = 1e18; // example value
+        user = address(0x123); // example user address
+        amount = 1e18; // example amount
+        totalDscMinted = 1e18; // example total DSC minted
+        collateralValueInUsd = 1e18; // example collateral value in USD
     }
 
     function invariant_protocolMustHaveMoreValueThanTotalSupply() public view {
@@ -62,7 +70,7 @@ contract Invariants is StdInvariant, Test {
         assert(wethValue + wbtcValue >= totalSupply);
     }
 
-    function invariant__gettersShouldNotRevert() public view {
+    function invariant_gettersShouldNotRevert() public view {
         dsce.getTokenAmountFromUSD(token, USDAmountInWei);
         dsce.getAccountCollateralValue(user);
         dsce.getUSDValue(token, amount);
