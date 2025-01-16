@@ -339,7 +339,7 @@ contract DSCEngine is ReentrancyGuard {
         return MIN_HEALTH_FACTOR;
     }
 
-    function getDsc() external view returns (address) {
+    function getDSC() external view returns (address) {
         return address(i_DSC);
     }
 
