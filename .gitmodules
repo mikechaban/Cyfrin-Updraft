@@ -43,3 +43,6 @@
 [submodule "Advanced Foundry/defi/lib/chainlink-brownie-contracts"]
 	path = Advanced Foundry/defi/lib/chainlink-brownie-contracts
 	url = https://github.com/smartcontractkit/chainlink-brownie-contracts
+[submodule "Advanced Foundry/ccip-rebase-token/lib/forge-std"]
+	path = Advanced Foundry/ccip-rebase-token/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
