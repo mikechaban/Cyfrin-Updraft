@@ -26,10 +26,53 @@ contract RebaseTokenTest is Test {
         vault = new Vault(IRebaseToken(address(rebaseToken)));
 
         rebaseToken.grantMintAndBurnRole(address(vault));
-        (bool success,) = payable(address(vault)).call{value: 1e18}("");
+        (bool success, ) = payable(address(vault)).call{value: 1e18}("");
 
         vm.stopPrank();
     }
 
-    function testDepositLinear() public {}
+    function testDepositLinear(uint256 amount /* each input is one run in fuzz testing */) public {
+        amount = bound(amount, 1e5, type(uint96).max); // <- instead of discarding the run if amount < 1e5, we modify the amount to be within the bound range
+
+        // 1. deposit
+        vm.startPrank(user);
+        vm.deal(user, amount);
+        vault.deposit{value: amount}();
+
+        // 2. check our rebase token balance
+        uint256 startBalance = rebaseToken.balanceOf(user);
+        console.log("startBalance: ", startBalance);
+        assertEq(startBalance, amount);
+
+        // 3. warp the time and check the balance again
+        vm.warp(block.timestamp + 1 hours);
+        uint256 middleBalance = rebaseToken.balanceOf(user);
+        assertGt(middleBalance, startBalance);
+
+        // 4. warp the time again by same amount and check the balance again
+        vm.warp(block.timestamp + 1 hours);
+        uint256 endBalance = rebaseToken.balanceOf(user);
+        assertGt(endBalance, middleBalance);
+
+        assertApproxEqAbs(endBalance - middleBalance, middleBalance - startBalance, 1);
+
+        vm.stopPrank();
+    }
+
+    function testRedeemStraightAway(uint256 amount) public {
+        amount = bound(amount, 1e5, type(uint96).max);
+
+        // 1. deposit
+        vm.startPrank(user);
+        vm.deal(user, amount);
+        vault.deposit{value: amount}();
+        assertEq(rebaseToken.balanceOf(user), amount);
+
+        // 2. redeem
+        vault.redeem(type(uint256).max);
+        assertEq(rebaseToken.balanceOf(user), 0);
+        assertEq(address(user).balance, amount);
+
+        vm.stopPrank();
+    }
 }
