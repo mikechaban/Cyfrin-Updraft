@@ -8,6 +8,9 @@ import {Vault} from "../src/Vault.sol";
 
 import {IRebaseToken} from "../src/interfaces/IRebaseToken.sol";
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
 contract RebaseTokenTest is Test {
     RebaseToken private rebaseToken;
     Vault private vault;
@@ -136,5 +139,19 @@ contract RebaseTokenTest is Test {
         // check the user interest rate has been inherited (5e10 not 4e10)
         assertEq(rebaseToken.getUserInterestRate(user), 5e10);
         assertEq(rebaseToken.getUserInterestRate(user2), 5e10);
+    }
+
+    function testCannotSetInterestRate(uint256 newInterestRate) public {
+        vm.prank(user);
+        vm.expectPartialRevert(Ownable.OwnableUnauthorizedAccount.selector);
+        rebaseToken.setInterestRate(newInterestRate);
+    }
+
+    function testCannotCallMintAndBurn() public {
+        vm.prank(user);
+        vm.expectPartialRevert(IAccessControl.AccessControlUnauthorizedAccount.selector);
+        rebaseToken.mint(user, 100);
+        vm.expectPartialRevert(IAccessControl.AccessControlUnauthorizedAccount.selector);
+        rebaseToken.burn(user, 100);
     }
 }
