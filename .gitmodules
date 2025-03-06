@@ -52,3 +52,6 @@
 [submodule "Advanced Foundry/ccip-rebase-token/lib/ccip"]
 	path = Advanced Foundry/ccip-rebase-token/lib/ccip
 	url = https://github.com/smartcontractkit/ccip
+[submodule "Advanced Foundry/ccip-rebase-token/lib/chainlink-local"]
+	path = Advanced Foundry/ccip-rebase-token/lib/chainlink-local
+	url = https://github.com/smartcontractkit/chainlink-local
