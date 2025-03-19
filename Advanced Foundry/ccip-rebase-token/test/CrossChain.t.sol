@@ -64,8 +64,14 @@ contract CrossChainTest is Test {
 
         // 2. Deploy and configure on Arbitrum Sepolia
         vm.selectFork(arbSepoliaFork);
+        vm.startPrank(owner);
+        console.log("Deploying token on Arbitrum");
         arbSepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
         arbSepoliaToken = new RebaseToken();
+        console.log("arbSepolia token address:");
+        console.log(address(arbSepoliaToken));
+        // Deploy the token pool on Arbitrum
+        console.log("Deploying token pool on Arbitrum");
         arbSepoliaPool = new RebaseTokenPool(IERC20(address(arbSepoliaToken)), new address[](0), arbSepoliaNetworkDetails.rmnProxyAddress, arbSepoliaNetworkDetails.routerAddress);
         arbSepoliaToken.grantMintAndBurnRole(address(arbSepoliaPool));
         RegistryModuleOwnerCustom(arbSepoliaNetworkDetails.registryModuleOwnerCustomAddress).registerAdminViaOwner(address(arbSepoliaToken));
@@ -79,13 +85,52 @@ contract CrossChainTest is Test {
         vm.startPrank(owner);
         TokenPool.ChainUpdate[] memory chains = new TokenPool.ChainUpdate[](1);
         bytes memory remotePoolAddress = abi.encode(address(remotePool));
-        chains[0] = TokenPool.ChainUpdate({remoteChainSelector: remoteNetworkDetails.chainSelector, allowed: true, remotePoolAddress: remotePoolAddress, remoteTokenAddress: abi.encode(address(remoteToken)), outboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0}), inboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0})});
+        chains[0] = TokenPool.ChainUpdate({
+            remoteChainSelector: remoteNetworkDetails.chainSelector,
+            allowed: true,
+            remotePoolAddress: remotePoolAddress,
+            remoteTokenAddress: abi.encode(address(remoteToken)),
+            outboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0}),
+            inboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0})
+        });
         uint64[] memory remoteChainSelectorsToRemove = new uint64[](0);
-        localPool.applyChainUpdates(chains);
+
+        // Add logging to debug the issue
+        console.log("Applying chain updates");
+        console.log("Local Pool Address:", address(localPool));
+        console.log("Remote Pool Address:", address(remotePool));
+        console.log("Remote Token Address:", address(remoteToken));
+        console.log("Remote Chain Selector:", remoteNetworkDetails.chainSelector);
+        console.logBytes(remotePoolAddress);
+        console.logBytes(abi.encode(address(remoteToken)));
+
+        // Add assertions to check for zero addresses
+        require(remotePoolAddress.length != 0, "Remote pool address is zero");
+        require(abi.encode(address(remoteToken)).length != 0, "Remote token address is zero");
+
+        // Try-catch block to capture the revert reason
+        try localPool.applyChainUpdates(chains) {
+            console.log("Chain updates applied successfully");
+        } catch Error(string memory reason) {
+            console.log("Error:", reason);
+            revert(reason);
+        } catch (bytes memory lowLevelData) {
+            console.logBytes(lowLevelData);
+            revert("applyChainUpdates failed");
+        }
+
         vm.stopPrank();
     }
 
-    function bridgeTokens(uint256 amountToBridge, uint256 localFork, uint256 remoteFork, Register.NetworkDetails memory localNetworkDetails, Register.NetworkDetails memory remoteNetworkDetails, RebaseToken localToken, RebaseToken remoteToken) public {
+    function bridgeTokens(
+        uint256 amountToBridge,
+        uint256 localFork,
+        uint256 remoteFork,
+        Register.NetworkDetails memory localNetworkDetails,
+        Register.NetworkDetails memory remoteNetworkDetails,
+        RebaseToken localToken,
+        RebaseToken remoteToken
+    ) public {
         vm.selectFork(localFork);
 
         //         struct EVM2AnyMessage {
@@ -99,7 +144,13 @@ contract CrossChainTest is Test {
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
         tokenAmounts[0] = Client.EVMTokenAmount({token: address(localToken), amount: amountToBridge});
 
-        Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({receiver: abi.encode(user), data: "", tokenAmounts: tokenAmounts, feeToken: localNetworkDetails.linkAddress, extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 100_000}))});
+        Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
+            receiver: abi.encode(user),
+            data: "",
+            tokenAmounts: tokenAmounts,
+            feeToken: localNetworkDetails.linkAddress,
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 100_000}))
+        });
         uint256 fee = IRouterClient(localNetworkDetails.routerAddress).getFee(remoteNetworkDetails.chainSelector, message);
         ccipLocalSimulatorFork.requestLinkFromFaucet(user, fee);
         vm.prank(user);
