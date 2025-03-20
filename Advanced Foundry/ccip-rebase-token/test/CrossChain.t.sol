@@ -47,7 +47,8 @@ contract CrossChainTest is Test {
         ccipLocalSimulatorFork = new CCIPLocalSimulatorFork();
         vm.makePersistent(address(ccipLocalSimulatorFork));
 
-        // 1. Deploy and configure on Sepolia
+        // Deploy and configure on Sepolia (Fork 0)
+        vm.selectFork(sepoliaFork);
         sepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
         vm.startPrank(owner);
         sepoliaToken = new RebaseToken();
@@ -59,25 +60,33 @@ contract CrossChainTest is Test {
         TokenAdminRegistry(sepoliaNetworkDetails.tokenAdminRegistryAddress).acceptAdminRole(address(sepoliaToken));
         TokenAdminRegistry(sepoliaNetworkDetails.tokenAdminRegistryAddress).setPool(address(sepoliaToken), address(sepoliaPool));
         vm.stopPrank();
-        configureTokenPool(sepoliaFork, sepoliaPool, arbSepoliaPool, IRebaseToken(address(arbSepoliaToken)), arbSepoliaNetworkDetails);
-        configureTokenPool(arbSepoliaFork, arbSepoliaPool, sepoliaPool, IRebaseToken(address(sepoliaToken)), sepoliaNetworkDetails);
 
-        // 2. Deploy and configure on Arbitrum Sepolia
+        console.log("Sepolia Pool Address:", address(sepoliaPool));
+        console.log("Active Fork After Sepolia Deployment:", vm.activeFork());
+
+        // Deploy on Arb Sepolia (Fork 1)
         vm.selectFork(arbSepoliaFork);
-        vm.startPrank(owner);
-        console.log("Deploying token on Arbitrum");
         arbSepoliaNetworkDetails = ccipLocalSimulatorFork.getNetworkDetails(block.chainid);
+        vm.startPrank(owner);
         arbSepoliaToken = new RebaseToken();
-        console.log("arbSepolia token address:");
-        console.log(address(arbSepoliaToken));
-        // Deploy the token pool on Arbitrum
-        console.log("Deploying token pool on Arbitrum");
+        console.log("Deploying RebaseTokenPool on Arb Sepolia...");
         arbSepoliaPool = new RebaseTokenPool(IERC20(address(arbSepoliaToken)), new address[](0), arbSepoliaNetworkDetails.rmnProxyAddress, arbSepoliaNetworkDetails.routerAddress);
+        console.log("Deployed Arb Sepolia Pool Address:", address(arbSepoliaPool));
         arbSepoliaToken.grantMintAndBurnRole(address(arbSepoliaPool));
         RegistryModuleOwnerCustom(arbSepoliaNetworkDetails.registryModuleOwnerCustomAddress).registerAdminViaOwner(address(arbSepoliaToken));
         TokenAdminRegistry(arbSepoliaNetworkDetails.tokenAdminRegistryAddress).acceptAdminRole(address(arbSepoliaToken));
         TokenAdminRegistry(arbSepoliaNetworkDetails.tokenAdminRegistryAddress).setPool(address(arbSepoliaToken), address(arbSepoliaPool));
         vm.stopPrank();
+
+        console.log("Arb Sepolia Pool Address:", address(arbSepoliaPool));
+        console.log("Active Fork After Arb Sepolia Deployment:", vm.activeFork());
+
+        // Ensure correct forks are selected before configuring
+        vm.selectFork(sepoliaFork);
+        configureTokenPool(sepoliaFork, sepoliaPool, arbSepoliaPool, IRebaseToken(address(arbSepoliaToken)), arbSepoliaNetworkDetails);
+
+        vm.selectFork(arbSepoliaFork);
+        configureTokenPool(arbSepoliaFork, arbSepoliaPool, sepoliaPool, IRebaseToken(address(sepoliaToken)), sepoliaNetworkDetails);
     }
 
     function configureTokenPool(uint256 fork, TokenPool localPool, TokenPool remotePool, IRebaseToken remoteToken, Register.NetworkDetails memory remoteNetworkDetails) public {
@@ -108,18 +117,46 @@ contract CrossChainTest is Test {
         require(remotePoolAddress.length != 0, "Remote pool address is zero");
         require(abi.encode(address(remoteToken)).length != 0, "Remote token address is zero");
 
+        console.log("Decoded Remote Pool Address:", address(bytes20(remotePoolAddress)));
+        console.log("Decoded Remote Token Address:", address(bytes20(abi.encode(address(remoteToken)))));
+        console.log("Chains Array Length:", chains.length);
+        console.log("Allowed:", chains[0].allowed);
+        console.log("Outbound Rate Limiter Enabled:", chains[0].outboundRateLimiterConfig.isEnabled);
+        console.log("Inbound Rate Limiter Enabled:", chains[0].inboundRateLimiterConfig.isEnabled);
+        console.log("TokenAdminRegistry address:", address(TokenAdminRegistry(remoteNetworkDetails.tokenAdminRegistryAddress)));
+        console.log("Remote Token Address in Registry:", address(remoteToken));
+        console.log("Active fork before applyChainUpdates:", vm.activeFork());
+        console.log("Expected fork:", fork);
+
+        //
+        //
+        //
+        console.log("Chain selector exists before update:", localPool.isSupportedChain(16015286601757825753));
+
+        console.log("Active fork before applyChainUpdates:", vm.activeFork());
+        console.log("Expected fork:", fork);
+        //
+        //
+        //
+
         // Try-catch block to capture the revert reason
         try localPool.applyChainUpdates(chains) {
-            console.log("Chain updates applied successfully");
+            console.log("applyChainUpdates executed successfully");
         } catch Error(string memory reason) {
-            console.log("Error:", reason);
+            console.log("applyChainUpdates failed with reason:", reason);
             revert(reason);
         } catch (bytes memory lowLevelData) {
+            console.log("applyChainUpdates failed with raw error:");
             console.logBytes(lowLevelData);
             revert("applyChainUpdates failed");
         }
 
+        // Add logging after applyChainUpdates
+        console.log("After applyChainUpdates");
+
         vm.stopPrank();
+        console.log("After stopPrank");
+        console.log("This function is done");
     }
 
     function bridgeTokens(
@@ -149,7 +186,7 @@ contract CrossChainTest is Test {
             data: "",
             tokenAmounts: tokenAmounts,
             feeToken: localNetworkDetails.linkAddress,
-            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 100_000}))
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV2({gasLimit: 100_000, allowOutOfOrderExecution: false}))
         });
         uint256 fee = IRouterClient(localNetworkDetails.routerAddress).getFee(remoteNetworkDetails.chainSelector, message);
         ccipLocalSimulatorFork.requestLinkFromFaucet(user, fee);
@@ -175,11 +212,22 @@ contract CrossChainTest is Test {
     }
 
     function testBridgeAllTokens() public {
+        configureTokenPool(sepoliaFork, sepoliaPool, arbSepoliaPool, IRebaseToken(address(arbSepoliaToken)), arbSepoliaNetworkDetails);
+        configureTokenPool(arbSepoliaFork, arbSepoliaPool, sepoliaPool, IRebaseToken(address(sepoliaToken)), sepoliaNetworkDetails);
+        // We are working on the source chain (Sepolia)
         vm.selectFork(sepoliaFork);
+        // Pretend a user is interacting with the protocol
+        // Give the user some ETH
         vm.deal(user, SEND_VALUE);
-        vm.prank(user);
+        vm.startPrank(user);
+        // Deposit to the vault and receive tokens
         Vault(payable(address(vault))).deposit{value: SEND_VALUE}();
-        assertEq(sepoliaToken.balanceOf(user), SEND_VALUE);
+        // bridge the tokens
+        console.log("Bridging %d tokens", SEND_VALUE);
+        uint256 startBalance = IERC20(address(sepoliaToken)).balanceOf(user);
+        assertEq(startBalance, SEND_VALUE);
+        vm.stopPrank();
+        // bridge ALL TOKENS to the destination chain
         bridgeTokens(SEND_VALUE, sepoliaFork, arbSepoliaFork, sepoliaNetworkDetails, arbSepoliaNetworkDetails, sepoliaToken, arbSepoliaToken);
     }
 }
