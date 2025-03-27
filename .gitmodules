@@ -64,3 +64,6 @@
 [submodule "Advanced Foundry/merkle-airdrop/lib/murky"]
 	path = Advanced Foundry/merkle-airdrop/lib/murky
 	url = https://github.com/dmfxyz/murky
+[submodule "Advanced Foundry/merkle-airdrop/lib/foundry-devops"]
+	path = Advanced Foundry/merkle-airdrop/lib/foundry-devops
+	url = https://github.com/cyfrin/foundry-devops
