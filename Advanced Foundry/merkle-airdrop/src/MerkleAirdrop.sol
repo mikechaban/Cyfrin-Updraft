@@ -3,6 +3,10 @@ pragma solidity ^0.8.24;
 
 import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract MerkleAirdrop {
     // means that we can call the functions defined in SafeERC20 on any variables of the IERC20 type
@@ -17,6 +21,13 @@ contract MerkleAirdrop {
     bytes32 private immutable i_merkleRoot;
     IERC20 private immutable i_airdropToken;
     mapping(address claimer => bool claimed) private s_hasClaimed;
+
+    bytes32 private constant MESSAGE_TYPEHASH = keccak256("AirdropClaim(address account,uint256 amount)");
+
+    struct AirdropClaim {
+        address account;
+        uint256 amount;
+    }
 
     event Claim(address account, uint256 amount);
 
@@ -50,5 +61,9 @@ contract MerkleAirdrop {
 
     function getAirdropToken() external view returns (IERC20) {
         return i_airdropToken;
+    }
+
+    function getMessageHash(address account, uint256 amount) public view returns (bytes32) {
+        return _hashTypedDataV4(keccak256(abi.encode(MESSAGE_TYPEHASH, AirdropClaim({account: account, amount: amount}))));
     }
 }
