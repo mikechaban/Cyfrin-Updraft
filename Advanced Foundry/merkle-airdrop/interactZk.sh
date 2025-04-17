@@ -11,11 +11,11 @@ PROOF_1="0xd1445c931158119b00449ffcac3c947d028c0c359c34a6646d95962b3b55c6ad"
 PROOF_2="0x46f4c7c1c21e8a90c03949beda51d2d02d1ec75b55dd97a999d3edbafa5a1e2f"
 
 
-# Compile and deploy BagelToken contract
+# Compile and deploy SushiToken contract
 echo "Creating zkSync local node..."
 npx zksync-cli dev start
 echo "Deploying token contract..."
-TOKEN_ADDRESS=$(forge create src/BagelToken.sol:BagelToken --rpc-url http://127.0.0.1:8011 --private-key ${DEFAULT_ZKSYNC_LOCAL_KEY} --legacy --zksync | awk '/Deployed to:/ {print $3}' )
+TOKEN_ADDRESS=$(forge create src/SushiToken.sol:SushiToken --rpc-url http://127.0.0.1:8011 --private-key ${DEFAULT_ZKSYNC_LOCAL_KEY} --legacy --zksync | awk '/Deployed to:/ {print $3}' )
 echo "Token contract deployed at: $TOKEN_ADDRESS"
 
 # Deploy MerkleAirdrop contract
