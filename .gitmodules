@@ -67,3 +67,9 @@
 [submodule "Advanced Foundry/merkle-airdrop/lib/foundry-devops"]
 	path = Advanced Foundry/merkle-airdrop/lib/foundry-devops
 	url = https://github.com/cyfrin/foundry-devops
+[submodule "Advanced Foundry/upgradeable-smart-contracts/lib/forge-std"]
+	path = Advanced Foundry/upgradeable-smart-contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "Advanced Foundry/upgradeable-smart-contracts/lib/openzeppelin-contracts"]
+	path = Advanced Foundry/upgradeable-smart-contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
