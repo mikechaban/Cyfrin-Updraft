@@ -73,3 +73,6 @@
 [submodule "Advanced Foundry/upgradeable-smart-contracts/lib/openzeppelin-contracts"]
 	path = Advanced Foundry/upgradeable-smart-contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "Advanced Foundry/upgradeable-smart-contracts/lib/openzeppelin-contracts-upgradeable"]
+	path = Advanced Foundry/upgradeable-smart-contracts/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
